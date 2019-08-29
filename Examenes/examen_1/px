@@ -1,0 +1,624 @@
+#!/bin/bash
+
+# Compilers (consts)
+CC=gcc
+CXX=g++
+JC=javac
+
+# Compiler options (consts)
+FLAGS="-Wall -Wextra -lm -pthread"
+CFLAGS="${FLAGS} -std=c11"
+CXXFLAGS="${FLAGS} -std=c++11"
+JAVAFLAGS=""
+
+# The list of supported actions and languages by this command
+action_list=(help build test output ziptest clean encode tab md html mkex)
+supported_languages="c|cpp|java"
+
+# Global variables:
+
+# The version of this software
+px_version='1.6'
+px_date='2019-Mar-23'
+# The action asked by the user
+action=
+# Options for the asked action
+options=
+# The selected programming language, default is 'all'
+lang=
+# The target (solution, given) selected by user, default is 'solution'
+target=
+# Name of zip file used to compress all test cases
+zip_name="test_cases.zip"
+
+function main
+{
+	# Start the execution of the program
+	analyze_arguments $@
+	do_${action}
+}
+
+function analyze_arguments
+{
+	# Analyze arguments given by user, and updates the global variables
+
+	# For each command line argument
+	while (( "$#" )); do
+
+		# Check if it is a global known argument
+		known=false
+
+		# Global options: help and version
+		if [ "$1" = "--help" ]; then
+			action='help'
+			known=true
+		elif [ "$1" = "--version" ]; then
+			action='version'
+			known=true
+		fi
+
+		# Check if argument matches a supported action
+		for action_name in ${action_list[@]}; do
+			if [ "$1" = "${action_name}" ]; then
+				# Only the first action is taken, remaining are
+				# considered as options: E.g: 'px help build'
+				if [ -z "${action}" ]; then
+					action="$1"
+				else
+					options="$1"
+				fi
+				known=true
+			fi
+		done
+
+		# Check if argument is a supported progamming language
+		if [ "$1" = "c" -o "$1" = "cpp" -o "$1" = "java" ]; then
+			lang="$1"
+			known=true
+		fi
+
+		if [ "$1" = "c++" ]; then
+			lang='cpp'
+			known=true
+		fi
+
+		# The argument was not recognized, assume it as an option
+		if [ "${known}" = "false" ]; then
+			if [ -z "${options}" ]; then
+				options="$1"
+			else
+				options="${options} $1"
+			fi
+		fi
+
+		# Move to the next argument
+		shift
+	done
+
+	set_defaults
+}
+
+function set_defaults
+{
+	# Default action is build all
+	if [ -z "${action}" ]; then
+		action='build'
+	fi
+
+	# Default language is all
+	if [ -z "${lang}" ]; then
+		lang='all'
+	fi
+
+	# Default target is solution:
+	if [ -z "${target}" ]; then
+		target='solution'
+	fi
+}
+
+function do_help
+{
+	# Action 'help' was called, options should have a command, otherwise
+	# assume general help (same as 'px help help')
+	if [ -z "${options}" ]; then
+		options='help'
+	fi
+
+	# Call the respective function named do_help_option
+	do_help_${options}
+}
+
+function do_help_help
+{
+	echo "Programming eXercise tool v${px_version}"
+	echo "Usage: px action [options]"
+	echo
+	echo "actions:"
+	echo "  build     Compile and build solution from source code (default)"
+	echo "  test      Check solution against test cases."
+	echo "  output    Update output files running solution with input files"
+	echo "  encode    Enforce text files to Unicode and Unix end-of-lines"
+	echo "  tab       Converts spaces by tabs"
+	echo "  md        Updates Markdown from html. Requires pandoc"
+	echo "  html      Updates HTML from Markdown. Requires pandoc"
+	echo "  ziptest   Compress test cases to a zip file"
+	echo "  mkex      Create a directory for a new programming exercise"
+	echo "  clean     Remove object and temporary files"
+	echo "  help      This help or more information about an action"
+	echo
+	echo "Write 'px help action' to know options for action"
+
+	check_dependencies
+}
+
+function do_help_build
+{
+	echo "Builds (compile and link) executables from source code in current directory"
+	echo "Usage: px build [target] [lang]"
+	echo
+	echo "target:"
+	echo "  solution  Build only solution code (default)"
+	echo "  given     Build only given code"
+	echo
+	echo "options:"
+	echo "  lang      Build only code in the specified language: ${supported_languages}"
+}
+
+function do_help_test
+{
+	echo "Test executables in current directory against all test cases"
+	echo "Usage: px test [target] [lang]"
+	echo
+	echo "target:"
+	echo "  solution  Test only solution code (default)"
+	echo "  given     Test only given code"
+	echo "  <file>    Any executable file to test"
+	echo
+	echo "options:"
+	echo "  lang      Test only code in the specified language: ${supported_languages}"
+	echo
+	echo "px uses icdiff if installed, otherwise uses diff"
+}
+
+function do_help_output
+{
+	echo "Updates test case output files using an executable in current directory"
+	echo "Usage: px output [target] [lang]"
+	echo
+	echo "target:"
+	echo "  solution  Generate output from solution (default)"
+	echo "  given     Generate output from given code"
+	echo "  <file>    Any executable file to generate the output"
+	echo
+	echo "options:"
+	echo "  lang      Generate output using the specified language: ${supported_languages}"
+}
+
+function do_help_encode
+{
+	echo "Ensures all text files are in Unicode, Unix end-of-lines, and end in new line"
+	echo "Usage: px encode"
+}
+
+function do_help_tab
+{
+	echo "Replaces indentation spaces by tabs"
+	echo "Usage: px tab [FILES]"
+	echo
+	echo "If FILES are omitted, all supported source code are assumed. If FILES are"
+	echo "specified, be sure do not remove accidentally whitespace in test cases."
+}
+
+function do_help_ziptest
+{
+	echo "Compress all test case input/output files to a zip file called ${zip_name}"
+	echo "If ${zip_name} already exist, it will be overwritten"
+	echo "Usage: px ziptest"
+}
+
+function do_help_md
+{
+	echo "Generates or updates Markdown files from all HTML files. Requires pandoc"
+	echo "Usage: px md"
+}
+
+function do_help_html
+{
+	echo "Generates or updates HTML files from all Markdown files. Requires pandoc"
+	echo "Usage: px html"
+}
+
+function do_help_clean
+{
+	echo "Remove object and temporary files from current directory"
+	echo "Usage: px clean"
+}
+
+function do_help_mkex
+{
+	echo "Create a directory for a new programming exercise"
+	echo "Usage: px mkex exercise_name"
+	echo
+	echo "This command must be called inside a section folder. E.g:"
+	echo "  cd 1.4_subroutines/"
+	echo "  px mkex tower_of_hanoi"
+}
+
+function do_version
+{
+	echo "px (Programming eXercise tool) v${px_version} [${px_date}]"
+	echo "Jeisson Hidalgo-Cespedes <jeisson.hidalgo@ucr.ac.cr>"
+	echo "University of Costa Rica, Computer Science School"
+	echo
+	echo "This is free software with no warranties. Use it at your own risk"
+}
+
+function check_dependencies
+{
+	if ! hash icdiff 2>/dev/null; then
+		echo
+		echo "Tip: install icdiff to get more readable test differences"
+		echo "[https://www.jefftk.com/icdiff]"
+	fi
+}
+
+function do_build
+{
+	# Call the build function using the respective compiler and options
+	# according to the selected language, or call all if no language
+	# was specified in arguments
+
+	if [ "$lang" = "c" -o "$lang" = "all" ]; then
+		build c ${CC} "${CFLAGS}"
+	fi
+	if [ "$lang" = "cpp" -o "$lang" = "all" ]; then
+		build cpp ${CXX} "${CXXFLAGS}"
+	fi
+	if [ "$lang" = "java" -o "$lang" = "all" ]; then
+		build java ${JC} "${JAVAFLAGS}"
+	fi
+}
+
+function build
+{
+	ext=$1
+	compiler=$2
+	flags=$3
+
+	# Locate all source files for the given language in current dir
+	for file in $(find . -maxdepth 1 -iname "${target}*.${ext}" | sort); do
+		# Remove initial "./" generated by find
+		file="${file#./}"
+
+		# Assemble compiler call string passing flags and the file
+		cmd="${compiler} ${flags} ${file}"
+
+		# Java files do not require '-o executable' option
+		if [ "$ext" != "java" ]; then
+			# Remove extension e.g: if file="solution.c" base="solution"
+			base=$(basename $file)
+			base="${base%.*}"
+
+			# Append the '-o solution' to the command string
+			cmd="${cmd} -o ${base}"
+		fi
+
+		# Call the compiler
+		run "${cmd}"
+	done
+}
+
+function run
+{
+	# Print the command to the stdout, then execute it
+	echo "${1}"
+	eval ${1}
+}
+
+function do_test
+{
+	# Run solutions against test cases
+
+	# If we have icdiff in $PATH, we use it, else we use diff
+	if hash icdiff 2>/dev/null; then
+		# icdiff requires to compare files
+		# './solution < inputN.txt > /tmp/px.diff && icdiff /tmp/px.diff outputN.txt' for each N
+		tmp="/tmp/px.diff"
+		run_tests "> $tmp && icdiff -W --no-headers $tmp"
+		rm -f "$tmp"
+	else
+		# './solution < inputN.txt | diff - outputN.txt' for each N
+		run_tests "| diff -u -"
+	fi
+}
+
+function do_output
+{
+	# Update test case output files running a solution:
+	# './solution < inputN.txt > outputN.txt' for each N
+	run_tests ">"
+}
+
+function run_tests
+{
+	redirection="$1"
+	name=
+
+	# C/C++ generate executable files, find them and run each one
+	if [ "$lang" = "c" -o "$lang" = "cpp" -o "$lang" = "all" ]; then
+		# An executable can be specified by name
+		if [ ! -z "${options}" ]; then
+			name="-iname ${options} -a"
+		fi
+
+		# The way to find executable finds depends on OS
+		if [ "$(uname)" == "Darwin" ]; then
+			files=$(find . ${name} -type f -perm +111 | sort)
+		else
+			files=$(find . ${name} -type f -executable | sort)
+		fi
+
+		# Run each executable against the test cases
+		for executable in $files; do
+			if [ $(basename $executable) != "px" ]; then
+				test_solution "${executable}" "${redirection}"
+			fi
+		done
+	fi
+
+	# Java produces .class files, we assume Solution and run it
+	if [ "$lang" = "java" -o "$lang" = "all" ]; then
+		# An executable can be specified by name, default is test all java solutions
+		if [ -z "${options}" ]; then
+			for class_file in $(find . -iname 'Solution*.class' | sort); do
+				# Remove the '.class' to call 'java Solution' without .class
+				class_name=$(basename $class_file)
+				class_name="${class_name%.*}"
+				test_solution "java ${class_name}" "${redirection}"
+			done
+		else
+			if [ -f "${options}.class" ]; then
+				test_solution "java ${options}" "${redirection}"
+			elif [ "$lang" = "java" ]; then
+				echo "error: could not find java solution: ${options}" 1>&2
+			fi
+		fi
+	fi
+}
+
+function test_solution
+{
+	executable="$1"
+	redirection="$2"
+
+	# Run $executable against each test case. Find inputN.txt files
+	for input in input*.*; do
+		# Assemble "outputN.txt" extracting the number from "inputN.txt"
+		number=${input//[^0-9]/}
+		extension=${input##*.}
+		output=output${number}.${extension}
+
+		# Run the executable to test or update the ouput
+		run "${executable} < ${input} ${redirection} ${output}"
+	done
+}
+
+function do_encode
+{
+	# For all text files (not binary) in current directory
+	for file in $(find . -type f -exec grep -Iq . {} \; -and -print | sort); do
+		to_unicode  "${file}"
+		to_unix_eol "${file}"
+		eol_at_eof  "${file}"
+	done
+}
+
+function to_unicode
+{
+	file="$1"
+
+	# Get the file encoding using "file -I" command
+	if [ "$(uname)" == "Darwin" ]; then
+		from_enc=$(file -I "${file}")
+	else
+		from_enc=$(file -i "${file}")
+	fi
+
+	# Etract the last word from 'charset=xxx' response from 'file -I'
+	from_enc=${from_enc##*=}
+
+	# Ignore lowercase/uppercase
+	shopt -s nocasematch
+
+	# If file encoding is not Unicode/ASCII e.g: Latin-1 we must convert
+	if [ "$from_enc" != "utf-8" -a "$from_enc" != "us-ascii" ]; then
+		echo "${file}: $from_enc -> utf-8"
+
+		# Convert encoding to Unicode saving it to temporary file
+		iconv -f $from_enc -t utf-8 < "${file}" > "${file}.utf8"
+
+		# If success
+		if [ $? -eq 0 ] ; then
+			# Move temporary file overwritting the original one
+			mv "${file}.utf8" "${file}"
+		else
+			# Remove invalid temporary file
+			rm -f "${file}.utf8"
+		fi
+	fi
+}
+
+function to_unix_eol
+{
+	file="$1"
+
+	# Command 'file' reports MS-DOS's CRLF end-of-lines
+	if file ${file} | grep "CRLF" > /dev/null 2>&1; then
+		echo "${file}: to unix end-of-lines"
+
+		# Remove the '\r' character from file, using a temporaral file
+		tr -d "\r" < ${file} > ${file}.tmp
+		mv ${file}.tmp ${file}
+	fi
+}
+
+function eol_at_eof
+{
+	file="$1"
+
+	# If the last line of file is not empty
+	if [ ! -z "$(tail -c 1 "${file}")" ]; then
+		# Append an empty line to the file
+		echo "${file}: new line at end"
+		echo >> "${file}"
+	fi
+}
+
+function do_tab
+{
+	# If no files are given, we assume all supported source code files
+	if [ -z "${options}" ]; then
+		options=(*.{c,cpp,h,java})
+	else
+		# Convert string to array
+		options=($options)
+	fi
+
+	# For each file
+	for file in "${options[@]}"; do
+		# If file exists
+		if [ -f "$file" ]; then
+			# Convert spaces to tabs, save result to temporary file
+			unexpand -t 4 "${file}" > "${file}.tab"
+
+			# If success and result is different than original
+			if [ $? -eq 0 ]; then
+				if ! cmp --silent "${file}" "${file}.tab"; then
+					# Move temporary file overwritting the original one
+					echo "${file}: spaces to tabs"
+					mv "${file}.tab" "${file}"
+				else
+					# Remove invalid temporary file
+					rm -f "${file}.tab"
+				fi
+			fi
+		fi
+	done
+}
+
+function do_md
+{
+	# Convert all problem.xx.html files to problem.xx.md
+	convert_problem html md 0
+}
+
+function do_html
+{
+	# Convert all problem.xx.md files to problem.xx.html
+	convert_problem md html 1
+}
+
+function convert_problem
+{
+	from_notation=$1
+	to_notation=$2
+	tidy=$3
+
+	# For each file in from notation (e.g: html)
+	for from_file in *.${from_notation}; do
+		# Remove extension, e.g: problem.es.html -> problem.es
+		name=$(basename $from_file)
+		name="${name%.*}"
+		target="${name}.${to_notation}"
+
+		# Convert to target notation using pandoc
+		run "pandoc ${from_file} -o ${target}"
+
+		# If asked to indent output file
+		if [ ${tidy} -eq 1 ]; then
+			if hash tidy 2>/dev/null; then
+				run "tidy -quiet -modify -indent -clean -wrap 9999 -utf8 ${target}"
+			fi
+		fi
+
+		# Make some adjustments for HTML output
+		if [ ${to_notation} == "html" ]; then
+			# Pandoc generate <pre><code>...</code></pre> sections
+			sed -i '' -e 's/<pre><code>/<pre>/g' "${target}"
+			sed -i '' -e 's/<\/code><\/pre>/<\/pre>/g' "${target}"
+
+			# HackerRank requires paragraphs separated by two new-lines
+			sed -i '' -e 's/<\/p>/<\/p><p><\/p>/g' "${target}"
+			sed -i '' -e 's/<\/pre>/<\/pre><p><\/p>/g' "${target}"
+		fi
+	done
+}
+
+function do_mkex
+{
+	exercise_name="${options}"
+	common_dir="../common"
+
+	if [ -d "${common_dir}/c_invented_exercise/" ]; then
+		mkdir "${exercise_name}"
+		if [ $? -ne 0 ] ; then
+			exit 1
+		fi
+
+		# If current directory starts with 1.x, is a C exercise
+		c_cpp="${lang}"
+		if [ -z "${c_cpp}" -o "${c_cpp}" = "all" ]; then
+			c_cpp='cpp'
+			if  [[ ${PWD##*/} == 1* ]] ; then
+				c_cpp='c'
+			fi
+		fi
+
+		cd "${exercise_name}"
+
+		#touch input01.txt
+		#touch output01.txt
+		touch problem.es.html
+		#touch tests.txt
+
+		echo "**Entrada de ejemplo**:" >> problem.es.md
+		echo >> problem.es.md
+		echo "**Salida de ejemplo**:" >> problem.es.md
+		echo >> problem.es.md
+
+		ln -s ../../common/Makefile
+		cp -p ../../common/given.${c_cpp} .
+		cp -p ../../common/given.${c_cpp}.pro .
+		cp -p ../../common/given.${c_cpp} solution.${c_cpp}
+		cp -p ../../common/solution.${c_cpp}.pro .
+		cp -p ../../common/Solution.java .
+		cd ..
+	else
+		echo "px mkdir must called from a section directory" 1>&2
+		echo "call 'px help mkdir' for more information" 1>&2
+	fi
+}
+
+function do_ziptest
+{
+	# If and old .zip file does exist, remove it
+	if [ -f ${zip_name} ]; then
+		run "rm -f ${zip_name}"
+	fi
+
+	# Compress the test cases
+	run "zip -9 ${zip_name} input*.* output*.*"
+}
+
+function do_clean
+{
+	# Remove only executable files that begin with 'solution' or 'given'
+	for file in $(find . -type f -executable -and -regex '\./\(solution\|given\).*$' | sort); do
+		run "rm -f ${file}"
+	done
+
+	# Remove object code
+	run "rm -rf *.o *.class *.dSYM *.zip"
+}
+
+main $@

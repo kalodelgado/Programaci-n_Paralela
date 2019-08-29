@@ -1,0 +1,11 @@
+10 20
+xxxxxxxxxxxxxxxxxxxx
+xxx..............xxx
+xxx.xxxxxxxxxxxx.xxx
+xxx.xx........xx.xxx
+xxx.xx.xxxxxx.xx.xxx
+xxx..............xxx
+xxxxxx.xxxxxx.xxxxxx
+xxxxxx.xxxxxx.xxxxxx
+xxxxxx........xxxxxx
+xxxxxxxxxxxxxxxxxxxx

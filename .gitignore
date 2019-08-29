@@ -1,0 +1,6 @@
+*.user.*
+build*
+*user*
+*.ods#
+*.autosave
+ejec
