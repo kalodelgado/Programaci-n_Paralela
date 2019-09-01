@@ -15,7 +15,7 @@ int main(int argc, char* argv[]) {
 	while (!validaCntHilos(thread_count) || !validaCntTerminos(n)) {
 		cout << "Digite la cantidad de hilos ( >=1 ): ";
 		cin >> thread_count;
-		cout << "Digite la cantidad de términos ( >=1 ): ";
+		cout << "Digite la cantidad de tÃ©rminos ( >=1 ): ";
 		cin >> n; //number_of_tosses
 	}
  
@@ -23,7 +23,7 @@ int main(int argc, char* argv[]) {
 	{
 		s = 0;
 		#pragma omp parallel for num_threads(thread_count) default(none) shared(i) reduction(+: s) 
-		for (j=1; j < i-1; j++) 
+		for (j=1; j < i; j++) 
 		{
 			if (i % j == 0)
 				s += j;
@@ -40,7 +40,7 @@ bool validaCntHilos(int ch) {
 	return ch >= 1;
 }
 
-// ct es la cantidad de términos de la sumatoria
+// ct es la cantidad de tÃ©rminos de la sumatoria
 bool validaCntTerminos(long long ct) {
 	return ct >= 1;
 }
