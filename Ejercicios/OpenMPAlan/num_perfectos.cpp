@@ -8,7 +8,7 @@ using namespace std;
 bool validaCntHilos(int ch);
 bool validaCntTerminos(long long ct);
  
-int main(int argc, char* argv[]) {
+int main() {
 	int n,i,j,s;
 	int thread_count = 0;
  
@@ -29,9 +29,9 @@ int main(int argc, char* argv[]) {
 				s += j;
 		}
 		if (i == s)
-			cout << n << ", ";
+			cout << s << ", ";
 	}
-	cout << endl
+	cout << endl;
 	cin >> i;
   return 0;
 }

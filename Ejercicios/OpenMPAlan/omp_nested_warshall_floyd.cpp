@@ -59,7 +59,6 @@ int main() {
 void leeAdyacencias(ifstream& ae, vector< vector< int > >& ma, int& cntVertices) {
 	int pe;
 	char finLinea = ' ';
-	int contadorLineas = 0;
 
 	ae >> cntVertices; // el primer número del archivo es la cantidad de vértices
 	vector< int > v;
@@ -90,18 +89,16 @@ void algoritmoFloydWarshall(const vector< vector< int > >& ma, vector< vector< i
 	mc = ma;
 
 	#pragma omp parallel for num_threads( omp_get_num_procs() ) default(none) shared(ma, mc)
-    for(int i = 0; i < ma[0].size(); i++)
+    for(int i = 0; i < int(ma[0].size()); i++)
         mc[i][i] = 0;
 		
     #pragma omp parallel for num_threads( 2 ) default(none) shared(ma, mc)
-    for(int k = 0; k < ma[0].size(); k++)
-        for(int i = 0; i < ma[0].size(); i++)
-            for(int j = 0; j < ma[0].size(); j++){
+    for(int k = 0; k < int(ma[0].size()); k++)
+        for(int i = 0; i < int(ma[0].size()); i++)
+            for(int j = 0; j < int(ma[0].size()); j++){
                 int dt = mc[i][k] + mc[k][j];
                 if(mc[i][j] > dt)
 					#pragma omp critical
                     mc[i][j] = dt;
             }
-    
-    return mc;
 }
