@@ -9,6 +9,8 @@ using namespace std;
 void leeAdyacencias(ifstream& ae, vector< vector< int > >& ma, int& cntVertices);
 void algoritmoFloydWarshall(const vector< vector< int > >& ma, vector< vector< int > >& mc);
 
+# define INT_MAX 2147483647
+
 int main() {
 	string nombreArchivoEntrada = "redPeq.txt"; // formato *.txt, por ejemplo "grafo.txt
 	string nombreArchivoSalida;  // formato *.txt, por ejemplo matriz_costos.txt 

@@ -15,7 +15,7 @@ void sort(const vector<int>& array);
 bool validaCntHilos(int ch);
 bool validaCntTerminos(long long ct);
 
-int main(int argc, char **argv) 
+int main() 
 {
 	long long n = 0;
 	int thread_count = 0;
@@ -58,14 +58,14 @@ int main(int argc, char **argv)
 		thread_vec.at(my_id) = local_data;
 		
 		if(my_id % 2 == 0)
-			std::merge( thread_vec[my_id], thread_vec[my_id].size(), 
-						thread_vec[my_id + 1], thread_vec[my_id + 1].size(), 
-						data + ( (int)thread_vec[my_id].size() * my_id) );	
+			std::merge( thread_vec[my_id].begin(), thread_vec[my_id].end(), 
+						thread_vec[my_id + 1].begin(), thread_vec[my_id + 1].end(), 
+						data.begin() + ( (int)thread_vec[my_id].size() * my_id) );	
 	}
 	
 	while(pow(2,p) < thread_count)
 	{
-		#pragma omp parallel num_threads( thread_count / pow(2,p) ) default(none) shared (thread_vec, data, p) private (my_id) 
+		#pragma omp parallel num_threads( (int)(thread_count / pow(2,p) ) ) default(none) shared (thread_vec, data, p) private (my_id) 
 		{
 			my_id = omp_get_thread_num();
 			if( my_id % 2 == 0)
@@ -75,18 +75,18 @@ int main(int argc, char **argv)
 				int size = s_vec_pos - f_vec_pos;
 				
 				std::merge(
-							data + f_vec_pos,
-							data + size, 
-							data + s_vec_pos, 
-							data + size, 
-							data + f_vec_pos
+							data.begin() + f_vec_pos,
+							data.begin() + f_vec_pos + size, 
+							data.begin() + s_vec_pos, 
+							data.begin() + s_vec_pos + size, 
+							data.begin() + f_vec_pos
 							);
 			}
 		}
 		p++;
 	}
 	
-	for (int i = 0; i < data.size(); i++)
+	for (int i = 0; i < (int)data.size(); i++)
         printf("%d ", data[i]);
 	
 	cin >> n;
