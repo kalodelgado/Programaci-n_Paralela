@@ -35,22 +35,29 @@ int main(int argc, char* argv[])
 	int ci = 0;		// cantidad de iteraciones
 	int i = 0;		// contador de iteraciones
 	int cs = 0;		// cantidad de sillas para clientes en espera
+	int cant_barberos = 0;
 	double prbClientes = 0.0;	// probabilidad de llegada de los clientes, 
 
 	vector< shared_ptr< Agente >> agentes;
-	Barbero* barbero_ptr = new Barbero(Barbero::esperando);
-	Barbero& barbero = *barbero_ptr;
-	agentes.push_back(shared_ptr< Barbero >(barbero_ptr));
 
 	if (argc != 5) uso(argv[0]);
-	clxp = stoi(argv[1], NULL, 10);
+		clxp = stoi(argv[1], NULL, 10);
 	if ((clxp <= 0) || (clxp > 5)) uso(argv[0]);
-	ci = stoi(argv[2], NULL, 10);
+		ci = stoi(argv[2], NULL, 10);
 	if (ci <= 0) uso(argv[0]);
-	cs = stoi(argv[3], NULL, 10);
+		cs = stoi(argv[3], NULL, 10);
 	if (cs <= 0) uso(argv[0]);
-	prbClientes = stod(argv[4]);
+		prbClientes = stod(argv[4]);
+	if (cant_barberos <= 0) uso(argv[0]);
+		cant_barberos = stoi(argv[5]);
 	if ((prbClientes <= 0) || (prbClientes >= 1)) uso(argv[0]);
+
+	for(int i = 0; i < cant_barberos; i++)
+	{
+		Barbero* barbero_ptr = new Barbero(Barbero::esperando);
+		Barbero& barbero = *barbero_ptr;
+		agentes.push_back(shared_ptr< Barbero >(barbero_ptr));
+	}
 
 	cp = omp_get_num_procs();						// obtiene la cantidad de procesadores
 

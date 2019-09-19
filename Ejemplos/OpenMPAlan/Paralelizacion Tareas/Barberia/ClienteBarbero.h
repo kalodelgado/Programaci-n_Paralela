@@ -30,7 +30,7 @@ public:
 	virtual ~ClienteBarbero();
 
 	int obtId();
-	int obtDC();//duracion de cuanto será atendido, DuracionCliente
+	int obtDC();
 	virtual int estado();
 	virtual void actuar();
 	virtual string estadoString();
