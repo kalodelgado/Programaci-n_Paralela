@@ -27,12 +27,11 @@ class Kmeans
 		int contAsig; //Contador de asignaciones
 		bool huboAsignaciones;
 		
-		vector< vector<double> > clusters; //Centroides k
+		vector< vector<double> > clusters; //Centroides k , Nombre tomado por video de DataMining
 		vector<int> clusterAsigment;
 		vector< vector<double> > distancias;
 		
-		int calcular_n_start(int n, int id, int process_count);
-		int calcular_n_end(int n, int id, int process_count);
+		double distanciaEuclideana(int centroide, vector<double>& valoresVec);
 };
 
 Kmeans::Kmeans(int cantClusters): cantClusters(cantClusters)
@@ -60,20 +59,13 @@ void Kmeans::calcDistance(vector< vector<double> >& vecDatos)
 	}
 
     #pragma omp for
-    for(int i = 0; i < distancias.size(); i++)
+    for(int i = 0; i < distancias.capacity(); i++)
 		distancias[i].reserve(cantClusters);
 	
 	#pragma omp for
 	for(int i = 0; i < cantClusters; i++)
-		for(int j = 0; j < vecDatos.size(); j++)
-		{
-			double d_e = 0.0; //guardará la diferencia al cuadrado de las dimensiones del centroide y un vector
-			
-			for(int k = 0; k < vecDatos[0].size()/*dimensionClusters*/; k++)
-				d_e += pow(clusters[i][k] - vecDatos[j][k], 2.0);
-	
-			distancias[j][i] = pow(d_e, 0.5);
-		}
+		for (int j = 0; j < vecDatos.size(); j++)
+			distancias[j][i] = distanciaEuclideana(i /*centroide*/, vecDatos[j]);
 }
 
 void Kmeans::calcAsigment()
@@ -130,19 +122,18 @@ void Kmeans::calcMedia(vector< vector<double> >& vecDatos)
 	}
 }
 
+double Kmeans::distanciaEuclideana(int centroide, vector<double>& valoresVec)
+{
+	double d_e = 0.0; //guardará la diferencia al cuadrado de las dimensiones del centroide y un vector
+
+#pragma omp for
+	for (int i = 0; i < valoresVec.size() /*dimensionClusters*/; i++)
+		d_e += pow(clusters[centroide][i] - valoresVec[i], 2.0);
+
+	return pow(d_e, 0.5);
+}
+
 bool Kmeans::getHuboAsignaciones()
 {
 	return huboAsignaciones;
-}
-
-int Kmeans::calcular_n_start(int n, int id, int process_count)
-{
-	return (n / process_count * id);
-}
-
-int Kmeans::calcular_n_end(int n, int id, int process_count)
-{
-	if (id == process_count - 1)
-		return n;
-	return (n / process_count * (id + 1) );
 }
