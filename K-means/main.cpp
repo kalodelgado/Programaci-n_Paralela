@@ -11,11 +11,11 @@ using namespace std;
 
 int main()
 {
-    int k = 0; //cantidad de agrupamientos requerida
-    int	n = 2; //dimensionalidad de los datos (cantidad de indices en cada vector de datos)
-    int	m = 4; //cantidad de vectores de datos
+    int k = 3; //cantidad de agrupamientos requerida
+    int	n = 5; //dimensionalidad de los datos (cantidad de indices en cada vector de datos)
+    int	m = 14; //cantidad de vectores de datos
 	double start, finish; //Almacenaran el tiempo pared
-
+/*
     do{
         cout << "Digite la cantidad de agrupamientos requerida ( >=1 ): ";
         cin >> k;
@@ -31,7 +31,7 @@ int main()
         cin >> m;
     }while(m <= 0);
     system("cls");
-
+*/
     vector< vector<double> > vecDatos;
     vecDatos.resize(m);
 
