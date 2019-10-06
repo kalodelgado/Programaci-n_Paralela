@@ -9,11 +9,17 @@ using namespace std;
 class LectorArchivo
 {
     public:
+        LectorArchivo();
+        
         LectorArchivo(ifstream& archivo, vector< vector<double> >& vec);
 
         // Destructor
         ~LectorArchivo();
+        
+        void escribirSalida(vector< vector<double> >& vecDatos, vector< vector<double> >& clusters, vector<int>& clusterAsigment);
 };
+
+LectorArchivo::LectorArchivo(){}
 
 LectorArchivo::LectorArchivo(ifstream& archivo, vector< vector<double> >& vec)
 {
@@ -63,3 +69,43 @@ LectorArchivo::LectorArchivo(ifstream& archivo, vector< vector<double> >& vec)
 }
 
 LectorArchivo::~LectorArchivo(){}
+
+void LectorArchivo::escribirSalida(vector< vector<double> >& vecDatos, vector< vector<double> >& clusters, vector<int>& clusterAsigment)
+{
+    ofstream archivo;
+    
+    archivo.open("archivo salida.csv", ios::out);
+    
+    if( archivo.fail() )
+    {
+        cout << "Error en salida de archivo." << endl;
+        exit(1);
+    }
+    
+    for(int i = 0; i < clusters.size(); i++)
+    {
+        for(int j = 0; j < clusterAsigment.size(); j++)
+            if(clusterAsigment[j] == i)
+            {
+                for(int k = 0; k < clusters[0].size(); k++)
+                {
+                    archivo << clusters[i][k];
+                    if(k != clusters[0].size() -1)
+                        archivo << ", ";
+                    else
+                        archivo << "\n ";
+                }
+                    
+                for(int k = 0; k < vecDatos[0].size(); k++)
+                {
+                    archivo << vecDatos[j][k];
+                    if(k != vecDatos[0].size() -1)
+                        archivo << ", ";
+                    else
+                        archivo << "\n ";
+                }
+            }
+        
+        archivo << "\n ";
+    }
+}

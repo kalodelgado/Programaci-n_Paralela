@@ -9,12 +9,17 @@ using namespace std;
 #include "LectorArchivo.h"
 #include "Kmeans.h"
 
+#define MAXI 2147483647 
+
 int main()
 {
     int k = 3; //cantidad de agrupamientos requerida
     int	n = 5; //dimensionalidad de los datos (cantidad de indices en cada vector de datos)
     int	m = 14; //cantidad de vectores de datos
-	double start, finish; //Almacenaran el tiempo pared
+    double start, finish; //Almacenaran el tiempo pared
+    int contAsig = 0; //Contador de asignaciones, para metodo calcAsigment
+    double min = MAXI;
+    
 /*
     do{
         cout << "Digite la cantidad de agrupamientos requerida ( >=1 ): ";
@@ -37,14 +42,14 @@ int main()
 
     #pragma omp parallel for shared(vecDatos)
     for(int i = 0; i < vecDatos.size(); i++)
-		vecDatos[i].reserve(n);
+        vecDatos[i].reserve(n);
 
-    string nombreArchivo;
+    string nombreArchivo = "prub.txt";
     bool noesValido = false;
 
     do {
-        cout << "Digite el nombre del archivo seguido de .csv" << endl;
-        cin >> nombreArchivo;
+        //cout << "Digite el nombre del archivo seguido de .csv" << endl;
+        //cin >> nombreArchivo;
         ifstream archivo(nombreArchivo, ios::in);
         if (!archivo) { // operador ! sobrecargado
             noesValido = true;
@@ -54,28 +59,32 @@ int main()
             LectorArchivo lector(archivo, vecDatos);
         }
     } while (noesValido);
+    
+    Kmeans kmeans(k);
 	
-	start = omp_get_wtime();
-	
-	Kmeans kmeans(k);
-	
-	kmeans.initCentroides(vecDatos);
-	
-	#pragma omp parallel num_threads( omp_get_num_procs() ) shared(vecDatos)
-	while( kmeans.getHuboAsignaciones() )
-	{
-		kmeans.calcDistance(vecDatos);
-		kmeans.calcAsigment();
-		
-		if( kmeans.getHuboAsignaciones() )
-			kmeans.calcMedia(vecDatos);
-		
+    //start = omp_get_wtime();
+
+    kmeans.initCentroides(vecDatos);
+
+    #pragma omp parallel num_threads( omp_get_num_procs() ) shared(vecDatos, contAsig)
+    while( kmeans.getHuboAsignaciones() )
+    {
+        kmeans.calcDistance(vecDatos);
+
+        kmeans.calcAsigment(&contAsig);
 		#pragma omp barrier
-	}
-	
-	finish = omp_get_wtime();
-	std::cout << endl << "Duracion " << finish - start << " segundos.";
-	
-	cin >> k;
-	return 0;
+
+        if( kmeans.getHuboAsignaciones() )
+            kmeans.calcMedia(vecDatos);
+
+        #pragma omp barrier
+    }
+
+    //finish = omp_get_wtime();
+    //std::cout << endl << "Duracion " << finish - start << " segundos.";
+    
+    LectorArchivo lect();
+
+    cin >> k;
+    return 0;
 }
