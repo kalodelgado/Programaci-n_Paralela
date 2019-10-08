@@ -9,8 +9,6 @@ using namespace std;
 #include "LectorArchivo.h"
 #include "Kmeans.h"
 
-#define MAXI 2147483647 
-
 int main()
 {
     int k = 3; //cantidad de agrupamientos requerida
@@ -18,9 +16,8 @@ int main()
     int	m = 14; //cantidad de vectores de datos
     double start, finish; //Almacenaran el tiempo pared
     int contAsig = 0; //Contador de asignaciones, para metodo calcAsigment
-    double min = MAXI;
-    
-/*
+    double fi = 0.0; //Costo de X respecto con C
+    /*
     do{
         cout << "Digite la cantidad de agrupamientos requerida ( >=1 ): ";
         cin >> k;
@@ -36,55 +33,40 @@ int main()
         cin >> m;
     }while(m <= 0);
     system("cls");
-*/
+    */
     vector< vector<double> > vecDatos;
     vecDatos.resize(m);
 
     #pragma omp parallel for shared(vecDatos)
-    for(int i = 0; i < vecDatos.size(); i++)
+    for(int i = 0; i < (int)vecDatos.size(); i++)
         vecDatos[i].reserve(n);
-
+	
     string nombreArchivo = "prub.txt";
-    bool noesValido = false;
-
-    do {
-        //cout << "Digite el nombre del archivo seguido de .csv" << endl;
-        //cin >> nombreArchivo;
-        ifstream archivo(nombreArchivo, ios::in);
-        if (!archivo) { // operador ! sobrecargado
-            noesValido = true;
-            cerr << "Has digitado mal el nombre del archivo o este no es valido \n" << endl;
-        } else {
-            noesValido = false;
-            LectorArchivo lector(archivo, vecDatos);
-        }
-    } while (noesValido);
     
+    //cout << "Digite el nombre del archivo seguido de .csv" << endl;
+    //cin >> nombreArchivo;
+    ifstream archivo(nombreArchivo, ios::in);    
+    if (!archivo) { // operador ! sobrecargado
+        cerr << "Has digitado mal el nombre del archivo o este no es valido \n" << endl;
+        exit(1);
+    }
+      
+    LectorArchivo lector(archivo, vecDatos);
     Kmeans kmeans(k);
 	
-    //start = omp_get_wtime();
+    start = omp_get_wtime();
 
-    kmeans.initCentroides(vecDatos);
+	#pragma omp parallel num_threads( omp_get_num_procs() ) shared(vecDatos, contAsig, fi)
+	{
+		kmeans.initCentroides(vecDatos, &fi, &contAsig);
 
-    #pragma omp parallel num_threads( omp_get_num_procs() ) shared(vecDatos, contAsig)
-    while( kmeans.getHuboAsignaciones() )
-    {
-        kmeans.calcDistance(vecDatos);
+		kmeans.kmedias(vecDatos, &contAsig);
+	}
 
-        kmeans.calcAsigment(&contAsig);
-		#pragma omp barrier
-
-        if( kmeans.getHuboAsignaciones() )
-            kmeans.calcMedia(vecDatos);
-
-        #pragma omp barrier
-    }
-
-    //finish = omp_get_wtime();
-    //std::cout << endl << "Duracion " << finish - start << " segundos.";
+    finish = omp_get_wtime();
+    std::cout << "Duracion " << finish - start << " segundos." << endl;
     
-    LectorArchivo lect();
+    lector.escribirSalida(vecDatos, kmeans.getVecClusters(), kmeans.getVecAsignaciones() );
 
-    cin >> k;
     return 0;
 }
