@@ -14,63 +14,57 @@ class LectorArchivo
         // Destructor
         ~LectorArchivo();
         
-        void escribirSalida(vector< vector<double> >& vecDatos, vector< vector<double> >& clusters, vector<int>& clusterAsigment);
+        void escribirSalida(vector< vector<double> >& vecDatos, vector< vector<double> >& clusters, vector<int>& clusterAsigment, double tiempo, double costo);
 };
 
 LectorArchivo::LectorArchivo(ifstream& archivo, vector< vector<double> >& vec)
 {
-    char datoActual; //lee un numero del archivo
-    char finLinea = ' ';
-    int contVertice = 0; //nos dira el indice del vertice donde se debe agregar datoActual
+	char finLinea = ' ';
+	int contVertice = 0; //nos dira el indice del vertice donde se debe agregar datoActual
 
-    string num = "";
-    while(finLinea != 10 && finLinea != ',')
-    {
-        archivo >> datoActual;
-        num += datoActual;
-        finLinea = archivo.get();
-        if(finLinea != 10 && finLinea != ',')
-            num += finLinea;        
-    }
+	string num = "";
+	while (finLinea != 10 && finLinea != ',')
+	{
+		finLinea = archivo.get();
+		if (finLinea != 10 && finLinea != ',')
+			num += finLinea;
+	}
 
-    while (!archivo.eof()) {
-        while (!archivo.eof() && (finLinea != 10)) 
-        {
-            vec[contVertice].push_back( atof(num.c_str()) ); //se agrega el elemento a la lista
+	while (!archivo.eof()) {
+		while (!archivo.eof() && (finLinea != 10))
+		{
+			vec[contVertice].push_back(atof(num.c_str())); //se agrega el elemento a la lista
 
-            num = "";
-            archivo >> datoActual;
-            num += datoActual;
-            finLinea = archivo.get();
-            while(!archivo.eof() && finLinea != 10 && finLinea != ',')
-            {                
-                num += finLinea;
-                finLinea = archivo.get();
-            }
-        }
-        vec[contVertice].push_back( atof(num.c_str()) ); //inserta el valor leido por el while superior
-        if (!archivo.eof()) { //si sale del while por finLinea
-            num = "";
-            archivo >> datoActual;
-            num += datoActual;
-            finLinea = archivo.get();
-            while(finLinea != 10 && finLinea != ',')
-            {                
-                num += finLinea;
-                finLinea = archivo.get();
-            }
-            ++contVertice; //se aumenta la posicion el vertice 
-        }    
-    }
+			num = "";
+			finLinea = archivo.get();
+			while (!archivo.eof() && finLinea != 10 && finLinea != ',')
+			{
+				num += finLinea;
+				finLinea = archivo.get();
+			}
+		}
+		vec[contVertice].push_back(atof(num.c_str())); //inserta el valor leido por el while superior
+		if (!archivo.eof()) { //si sale del while por finLinea
+			num = "";
+			finLinea = archivo.get();
+			while (finLinea != 10 && finLinea != ',' && !archivo.eof())
+			{
+				num += finLinea;
+				finLinea = archivo.get();
+			}
+			++contVertice; //se aumenta la posicion el vertice 
+		}
+	}
 }
 
 LectorArchivo::~LectorArchivo(){}
 
-void LectorArchivo::escribirSalida(vector< vector<double> >& vecDatos, vector< vector<double> >& clusters, vector<int>& clusterAsigment)
+void LectorArchivo::escribirSalida(vector< vector<double> >& vecDatos, vector< vector<double> >& clusters, vector<int>& clusterAsigment, double tiempo, double costo)
 {
     ofstream archivo;
+	int contador;
     
-    archivo.open("archivo salida.csv", ios::out);
+    archivo.open("salida.csv", ios::out);
     
     if( archivo.fail() )
     {
@@ -78,9 +72,10 @@ void LectorArchivo::escribirSalida(vector< vector<double> >& vecDatos, vector< v
         exit(1);
     }
     
-    for(int i = 0; i < clusters.size(); i++)
+    for(int i = 0; i < (int)clusters.size(); i++)
     {
-        for(int k = 0; k < clusters[0].size(); k++)
+		contador = 0;
+        for(int k = 0; k < (int)clusters[0].size(); k++)
         {
             archivo << clusters[i][k];
             if(k != clusters[0].size() -1)
@@ -100,7 +95,11 @@ void LectorArchivo::escribirSalida(vector< vector<double> >& vecDatos, vector< v
                     else
                         archivo << "\n";
                 }
+				contador++;
             }        
-        archivo << "\n";
+        archivo << contador << "\n\n";
     }
+	archivo << "Costo " << costo << "\n";
+	archivo << "Duracion " << tiempo << " segundos.";
+
 }

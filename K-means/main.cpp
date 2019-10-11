@@ -11,10 +11,9 @@ using namespace std;
 
 int main()
 {
-    int k = 3; //cantidad de agrupamientos requerida
-    int	n = 5; //dimensionalidad de los datos (cantidad de indices en cada vector de datos)
-    int	m = 14; //cantidad de vectores de datos
-    double start, finish; //Almacenaran el tiempo pared
+    int k = 5; //cantidad de agrupamientos requerida
+    int	m = 100; //cantidad de vectores de datos
+    double tiempo_pared; //Almacenaran el tiempo pared
     int contAsig = 0; //Contador de asignaciones, para metodo calcAsigment
     double fi = 0.0; //Costo de X respecto con C
     /*
@@ -37,11 +36,7 @@ int main()
     vector< vector<double> > vecDatos;
     vecDatos.resize(m);
 
-    #pragma omp parallel for shared(vecDatos)
-    for(int i = 0; i < (int)vecDatos.size(); i++)
-        vecDatos[i].reserve(n);
-	
-    string nombreArchivo = "prub.txt";
+    string nombreArchivo = "5_100_4.csv";
     
     //cout << "Digite el nombre del archivo seguido de .csv" << endl;
     //cin >> nombreArchivo;
@@ -54,19 +49,19 @@ int main()
     LectorArchivo lector(archivo, vecDatos);
     Kmeans kmeans(k);
 	
-    start = omp_get_wtime();
+	omp_set_nested(1);
+    tiempo_pared = omp_get_wtime();
 
-	#pragma omp parallel num_threads( omp_get_num_procs() ) shared(vecDatos, contAsig, fi)
-	{
-		kmeans.initCentroides(vecDatos, &fi, &contAsig);
+    #pragma omp parallel num_threads( omp_get_num_procs() * 4 ) shared(vecDatos, contAsig, fi)
+    {
+        kmeans.initCentroides(vecDatos, &fi, &contAsig);
 
-		kmeans.kmedias(vecDatos, &contAsig);
-	}
+        kmeans.kmedias(vecDatos, &contAsig);
+    }
 
-    finish = omp_get_wtime();
-    std::cout << "Duracion " << finish - start << " segundos." << endl;
+	tiempo_pared = omp_get_wtime() - tiempo_pared;
     
-    lector.escribirSalida(vecDatos, kmeans.getVecClusters(), kmeans.getVecAsignaciones() );
+    lector.escribirSalida(vecDatos, kmeans.getVecClusters(), kmeans.getVecAsignaciones() , tiempo_pared, fi);
 
     return 0;
 }
