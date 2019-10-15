@@ -1,10 +1,12 @@
 #include <omp.h>
 #include <vector>
+#include <queue>
 #include <stdlib.h>
 #include <iostream>
 #include <string>
 #include <time.h>
 #include <cmath>
+#include <set>
 
 using namespace std;
 
@@ -36,13 +38,15 @@ class Kmeans
 
         vector< vector<double> > clusters; //Centroides k , Nombre tomado por video de DataMining
         vector< vector<double> > clustersCandidatos;
+		vector< vector<double> > clustersCandidatosCopy;
         vector<int> clusterAsigment;
+		vector< queue<int> > vecAsig;
         vector< vector<double> > distancias;
         vector<int> pesos;		
 
-        double costX(vector< vector<double> >& vecDatos, vector< vector<double> >& subVector);
+        void costX(vector< vector<double> >& vecDatos, vector< vector<double> >& subVector, double* sum); //Modifica el valor de sum
         double distanciaEuclideana(vector<double>& valoresVec1, vector<double>& valoresVec2);
-        void kmeansPlusplus();
+        void kmeansPlusplus(int* pos, double* promedioMaximo);
         void calcPesos(vector<vector<double>>& vecDatos);
         int getPesoMayor(int numClsuter); // Retorna la posicion del punto con mayor peso del grupo # numCluster;
 };
@@ -50,56 +54,75 @@ class Kmeans
 Kmeans::Kmeans(int cantClusters): cantClusters(cantClusters)
 {
 	huboAsignaciones = true;
+	vecAsig.resize(cantClusters);
 }
 
 Kmeans::~Kmeans()
 {}
 
 void Kmeans::initCentroides(vector< vector<double> >& vecDatos, double* fi, int* contAsig)
-{   
-    srand(time(NULL));
-    Aleatorizador::inicializar_generador_random();
+{
+	srand(time(NULL));
+	Aleatorizador::inicializar_generador_random();
 
-    #pragma omp single
-	{
-		clustersCandidatos.push_back(vecDatos[rand() % vecDatos.size()]);
-		*fi = log(costX(vecDatos, clustersCandidatos));
-	}
+	int ind = rand() % vecDatos.size();
+	clustersCandidatos.push_back(vecDatos[ind]);
+	clustersCandidatosCopy.push_back(vecDatos[ind]);
 
-	for (int i = 0; i < int(*fi); i++) //for que se har� logl veces
+	int iter = 0, pos;
+	double sum = 0.0;
+
+	#pragma omp parallel num_threads( omp_get_num_procs() * 4 ) shared(vecDatos, iter, fi, sum, pos)
 	{
-		#pragma omp for
-		for (int j = 0; j < vecDatos.size(); j++)
+		costX(vecDatos, clustersCandidatos, fi);
+		#pragma omp barrier
+
+		#pragma omp single
+		*fi = log(*fi);
+
+		while (iter < (int)(*fi) ) //for que se har� logl veces
 		{
-			int tam_clusters;
-			double min = MAXI;
+			costX(vecDatos, clustersCandidatos, &sum);
+			#pragma omp barrier
 
-			#pragma omp critical
-			tam_clusters = (int)clustersCandidatos.size();
-
-			for (int k = 0; k < tam_clusters; k++)
+			#pragma omp for
+			for (int j = 0; j < vecDatos.size(); j++)
 			{
-				double dist = distanciaEuclideana(clustersCandidatos[k], vecDatos[j]);
-				if (min > dist)
-					min = dist;
+				int tam_clusters;
+				double min = MAXI;
+
+				#pragma omp critical
+				tam_clusters = (int)clustersCandidatos.size();
+
+				for (int k = 0; k < tam_clusters; k++)
+				{
+					double dist = distanciaEuclideana(clustersCandidatos[k], vecDatos[j]);
+					if (min > dist)
+						min = dist;
+				}
+
+				#pragma omp critical
+				if (Aleatorizador::random_uniform_real(Aleatorizador::generador) < (0.7 * min) / sum)
+				{
+					clustersCandidatos.push_back(vecDatos[j]);
+					clustersCandidatosCopy.push_back(vecDatos[j]);
+				}
 			}
 
-			#pragma omp critical
-			if (Aleatorizador::random_uniform_real(Aleatorizador::generador) < (0.5 * min) / costX(vecDatos, clustersCandidatos))
-				clustersCandidatos.push_back(vecDatos[j]);
+			#pragma omp single
+			iter++;
 		}
-	}
      
-    #pragma omp single
-	kmeansPlusplus();
-    
-    kmedias(clustersCandidatos, contAsig);
-  
-    calcPesos(clustersCandidatos);
-    
-    #pragma omp for
-    for(int i = 0; i < cantClusters; i++)
-        clusters[i] = clustersCandidatos[ getPesoMayor(i) ];
+		kmeansPlusplus(&pos, &sum);
+	
+		kmedias(clustersCandidatos, contAsig);
+
+		calcPesos(clustersCandidatos);
+
+		#pragma omp for
+		for (int i = 0; i < cantClusters; i++)
+			clusters[i] = clustersCandidatos[getPesoMayor(i)];
+	}
 
 }
 
@@ -163,8 +186,12 @@ void Kmeans::calcAsigment(int* contAsig)
         {
             #pragma omp atomic
             (*contAsig)++;
-        }else
-            clusterAsigment[i] = ident;
+		}
+		else
+			clusterAsigment[i] = ident;
+
+		#pragma omp critical
+		vecAsig[ident].push(i);
     }
 
     #pragma omp single
@@ -176,26 +203,23 @@ void Kmeans::calcMedia(vector< vector<double> >& vecDatos)
 {
     #pragma omp for
     for(int i = 0; i < cantClusters; i++)
-		//#pragma omp for
         for (int j = 0; j < clusters[0].size(); j++)
             clusters[i][j] = 0;
 
-    #pragma omp for
-    for(int i = 0; i < cantClusters; i++) //i = identificador del cluster
-    {
-        int cont = 0;
-        for(int j = 0; j < (int)clusterAsigment.size(); j++)
-            if(clusterAsigment[j] == i)
-            {
-                for(int k = 0; k < vecDatos[0].size(); k++)
-                    clusters[i][k] += vecDatos[j][k];
-                cont++;
-            }
-        
-		//#pragma omp for
-        for(int l = 0; l < clusters[0].size(); l++)
-            clusters[i][l] /=(double)cont;
-    }
+	#pragma omp for
+	for (int i = 0; i < cantClusters; i++) //i = identificador del cluster
+	{
+		int cont = vecAsig[i].size();
+		while (!vecAsig[i].empty())
+		{
+			for (int k = 0; k < vecDatos[0].size(); k++)
+				clusters[i][k] += vecDatos[vecAsig[i].front()][k];
+			vecAsig[i].pop();
+		}
+
+		for (int l = 0; l < clusters[0].size(); l++)
+			clusters[i][l] /= (double)cont;
+	}
 }
 
 double Kmeans::distanciaEuclideana(vector<double>& valoresVec1, vector<double>& valoresVec2)
@@ -208,51 +232,64 @@ double Kmeans::distanciaEuclideana(vector<double>& valoresVec1, vector<double>& 
     return pow(d_e, 0.5);
 }
 
-double Kmeans::costX(vector< vector<double> >& vecDatos, vector< vector<double> >& subVector)
+void Kmeans::costX(vector< vector<double> >& vecDatos, vector< vector<double> >& subVector, double* sum)
 {
-	double sum = 0; // fi
-	double min, dist;
+	#pragma omp single
+	*sum = 0.0;
 
+	#pragma omp for
 	for (int i = 0; i < vecDatos.size(); i++)
 	{
-		min = MAXI;
+		double min = MAXI;
 		for (int j = 0; j < subVector.size(); j++)
 		{
-			dist = distanciaEuclideana(subVector[j] /*centroide*/, vecDatos[i]);
+			double dist = distanciaEuclideana(subVector[j] /*centroide*/, vecDatos[i]);
 			if (min > dist)
 				min = dist;
 		}
-		sum += min;
+		#pragma omp atomic
+		*sum += min;
 	}
-
-	return sum;
 }
 
-void Kmeans::kmeansPlusplus()
+void Kmeans::kmeansPlusplus(int* pos, double* promedioMaximo)
 {
     srand(time(NULL));
-    Aleatorizador::inicializar_generador_random();
+	
+	#pragma omp single
+	{
+		*pos = rand() % clustersCandidatos.size();
+		clusters.push_back(clustersCandidatosCopy[*pos]);
+		clustersCandidatosCopy.erase(clustersCandidatosCopy.begin() + *pos);
+	}
 
-    clusters.push_back(clustersCandidatos[rand() % clustersCandidatos.size()]);
+	while (clusters.size() < cantClusters)
+	{
+		#pragma omp single
+		*promedioMaximo = 0.0;
 
-	int ind;
-	double dmin, dist;
+		#pragma omp for
+		for (int i = 0; i < clustersCandidatosCopy.size(); i++)
+		{
+			double suma = 0;
+			for (int j = 0; j < clusters.size(); j++)
+			{
+				suma += distanciaEuclideana(clustersCandidatosCopy[i], clusters[j]);
+			}
 
-    while (clusters.size() < cantClusters)
-    {
-        ind = rand() % clustersCandidatos.size(); //Obtencion del identificador
-        dmin = MAXI;
+			#pragma omp critical
+			if (suma > *promedioMaximo)
+			{
+				*promedioMaximo = suma;
+				*pos = i;
+			}
+		}
 
-        for (int i = 0; i < clusters.size(); i++)
-        {
-			dist = distanciaEuclideana(clusters[i], clustersCandidatos[ind]);
-			if (dmin > dist)
-				dmin = dist;
-        }
-
-        if (Aleatorizador::random_uniform_real(Aleatorizador::generador) < dmin / costX(clustersCandidatos, clusters))
-            clusters.push_back(clustersCandidatos[ind]);
-
+		#pragma omp single
+		{
+			clusters.push_back(clustersCandidatosCopy[*pos]);
+			clustersCandidatosCopy.erase(clustersCandidatosCopy.begin() + *pos);
+		}
     }
 }
 

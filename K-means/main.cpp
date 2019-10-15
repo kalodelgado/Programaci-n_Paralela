@@ -23,11 +23,6 @@ int main()
     }while(k <= 0);
 
     do{
-        cout << "Digite la dimensionalidad de los datos ( >=1 ): ";
-        cin >> n;
-    }while(n <= 0);
-
-    do{
         cout << "Digite la cantidad de vectores de datos ( >=1 ): ";
         cin >> m;
     }while(m <= 0);
@@ -49,15 +44,12 @@ int main()
     LectorArchivo lector(archivo, vecDatos);
     Kmeans kmeans(k);
 	
-	omp_set_nested(1);
     tiempo_pared = omp_get_wtime();
 
-    #pragma omp parallel num_threads( omp_get_num_procs() * 4 ) shared(vecDatos, contAsig, fi)
-    {
-        kmeans.initCentroides(vecDatos, &fi, &contAsig);
+	kmeans.initCentroides(vecDatos, &fi, &contAsig);
 
-        kmeans.kmedias(vecDatos, &contAsig);
-    }
+    #pragma omp parallel num_threads( omp_get_num_procs() * 4 ) shared(vecDatos, contAsig, fi)
+    kmeans.kmedias(vecDatos, &contAsig);
 
 	tiempo_pared = omp_get_wtime() - tiempo_pared;
     
