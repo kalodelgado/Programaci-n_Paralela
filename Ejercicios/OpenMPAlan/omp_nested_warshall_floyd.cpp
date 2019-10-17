@@ -2,7 +2,7 @@
 #include <iostream>
 #include <fstream>
 #include <string>
-#include <chrono> // para medir el tiempo de ejecuciÛn
+#include <chrono> // para medir el tiempo de ejecuci√≥n
 #include <omp.h> 
 using namespace std;
 
@@ -44,7 +44,7 @@ int main() {
 	// se toma otra marca de tiempo
 	finish = omp_get_wtime();
 
-	// se despliega la duraciÛn:
+	// se despliega la duraci√≥n:
 	std::cout << endl << "Duracion " << finish - start << " segundos.";
 	std::cout << std::endl;
 
@@ -62,22 +62,22 @@ void leeAdyacencias(ifstream& ae, vector< vector< int > >& ma, int& cntVertices)
 	int pe;
 	char finLinea = ' ';
 
-	ae >> cntVertices; // el primer n˙mero del archivo es la cantidad de vÈrtices
+	ae >> cntVertices; // el primer n√∫mero del archivo es la cantidad de v√©rtices
 	vector< int > v;
 	v.resize(cntVertices, INT_MAX);
 	ma.resize(cntVertices, v);
 
 	ae.get(); // consume un blanco
-	finLinea = ae.peek(); // intenta leer fin de lÌnea
+	finLinea = ae.peek(); // intenta leer fin de l√≠nea
 
-	// salta a la siguiente para leer el primer n˙mero de la lÌnea #2
+	// salta a la siguiente para leer el primer n√∫mero de la l√≠nea #2
 	ae >> pe;
 	for (int i = 0; i < cntVertices; i++) {
-		while (!ae.eof() && (finLinea != '\n')) { // 10 ascii de fin de lÌnea
+		while (!ae.eof() && (finLinea != '\n')) { // 10 ascii de fin de l√≠nea
 			ma[i][pe] = 1;
 			ae >> pe;
 			ae.get(); // consume un blanco
-			finLinea = ae.peek(); // intenta leer fin de lÌnea
+			finLinea = ae.peek(); // intenta leer fin de l√≠nea
 		}
 		if (!ae.eof())
 			ma[i][pe] = 1;
@@ -104,8 +104,8 @@ void algoritmoFloydWarshall(const vector< vector< int > >& ma, vector< vector< i
 			for (int j = 0; j < int(ma[0].size()); j++) 
 			{
 				int dt = mc[i][k] + mc[k][j];
-				if (mc[i][j] > dt)
-					#pragma omp critical
+				#pragma omp critical
+				if (mc[i][j] > dt)					
 					mc[i][j] = dt;
 			}
 		}
