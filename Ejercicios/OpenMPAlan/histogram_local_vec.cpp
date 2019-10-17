@@ -66,7 +66,7 @@ void print_histo(
 int main(int argc, char* argv[]) {
 	int bin_count, bin;		  // cantidad de bins, bin actual, bin == rango
 	float min_meas, max_meas; // valor inferior de datos, valor superior de datos
-	vector<float> bin_maxes;  // vector de m·ximos por bin
+	vector<float> bin_maxes;  // vector de m√°ximos por bin
 	vector<int> bin_counts;   // vector para contar valores por bin
 	int data_count;			  // cantidad de datos
 	vector<float> data;		  // vector de datos
@@ -100,7 +100,7 @@ int main(int argc, char* argv[]) {
 			bin = which_bin(data[i], bin_maxes, bin_count, min_meas);
 			bin_local_counts[bin]++;
 		}
-		#pragma omp for
+		
 		for (int i = 0; i < bin_count; i++) 
 		{
 			#pragma omp atomic
