@@ -9,13 +9,6 @@ using namespace std;
 
 #include "Aleatorizador.h"
 
-class Duende
-{
-	public:
-		Duende();
-		virtual ~Duende();
-};
-
 void atender_duendes_restantes(queue<string>& cola)
 {
 	int iter = cola.size() / 3;
@@ -85,7 +78,7 @@ int main()
 					duendes.push("duende");
 				}				
 			}
-			//omitimos la barrera, porque deberian seguir creandose duendes aunque santa esté atendiendo
+			//omitimos la barrera, porque deberian seguir creandose duendes aunque santa estÃ© atendiendo
 			#pragma omp master
 			{
 				#pragma omp critical
@@ -121,10 +114,10 @@ int main()
 			#pragma omp master
 			{
 				cout << "Estado de Santa: " << estado_santa << endl;
-				cout << "Duendes en espera (al final de iteración): " << duendes.size() << endl;
-				cout << "Cantidad de renos (al final de iteración): " << cant_renos << endl;
+				cout << "Duendes en espera (al final de iteraciÃ³n): " << duendes.size() << endl;
+				cout << "Cantidad de renos (al final de iteraciÃ³n): " << cant_renos << endl;
 				if(ya_repartio)
-					cout << "	Ya utilizó los renos" << endl;
+					cout << "	Ya utilizÃ³ los renos" << endl;
 				else
 					cout << "	Aun no utiliza los renos" << endl;
 					
