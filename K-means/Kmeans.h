@@ -1,340 +1,280 @@
-#include <omp.h>
-#include <vector>
-#include <queue>
-#include <stdlib.h>
 #include <iostream>
-#include <string>
+#include <vector>
 #include <time.h>
-#include <cmath>
-#include <set>
+#include <math.h>
+#include <omp.h>
 
 using namespace std;
+#define MAXI 2147483647
 
-#include "Aleatorizador.h"
-
-#define MAXI 2147483647 
-
-class Kmeans
+class Kmeans 
 {
-    public:
-        Kmeans(int cantClusters);
-
-        // Destructor
+	public:
+		/*
+		 * @param m int Longitud del vector
+		 * */
+		Kmeans(int m);
+		
+		// Destructor
         ~Kmeans();
 		
-        vector<int>& getVecAsignaciones();
+		void llenarCandidatos(vector<vector<double>> &datos, double l);
+		void llenarIniciales(int k, vector<vector<double>> &datos);
+		void calcAsignaciones(vector<vector<double>> &datos, bool *cambio);
+		void recalcIniciales(vector<vector<double>> &datos, int epsilon);
+		
+		vector<int>& getVecAsignaciones();
         vector< vector<double> >& getVecClusters();
-
-        void initCentroides(vector< vector<double> >& vecDatos, double* fi, int* contAsig);
-        void kmedias(vector< vector<double> >& vecDatos, int* contAsig);
-        void establecerTam(vector< vector<double> >& vecDatos);
-        void calcDistance(vector< vector<double> >& vecDatos);
-        void calcAsigment(int* contAsig);
-        void calcMedia(vector< vector<double> >& vecDatos);
+		
+		double fi;
 	
-    private:
-        int cantClusters; // k (cantidad de centroides a seleccionar)
-        bool huboAsignaciones;
-
-        vector< vector<double> > clusters; //Centroides k , Nombre tomado por video de DataMining
-        vector< vector<double> > clustersCandidatos;
-		vector< vector<double> > clustersCandidatosCopy;
-        vector<int> clusterAsigment;
-		vector< queue<int> > vecAsig;
-        vector< vector<double> > distancias;
-        vector<int> pesos;		
-
-        void costX(vector< vector<double> >& vecDatos, vector< vector<double> >& subVector, double* sum); //Modifica el valor de sum
-        double distanciaEuclideana(vector<double>& valoresVec1, vector<double>& valoresVec2);
-        void kmeansPlusplus(int* pos, double* promedioMaximo);
-        void calcPesos(vector<vector<double>>& vecDatos);
-        int getPesoMayor(int numClsuter); // Retorna la posicion del punto con mayor peso del grupo # numCluster;
+	private:
+		vector<int> pesos;
+		vector<int> asignaciones; //Vector donde se verificará si hubo o no asignaciones
+		vector<vector<double>> cIniciales; //Centroides k
+		vector<vector<double>> cCandidatos;
+	
+		double distancia(vector<double> &vec1, vector<double> &vec2);
+		void calcPesos(vector< vector<double> >& cCandidatos, vector < vector<double>> & datos);
+		void calcMedia(vector<vector<double>> &dato);
+		void costoX(double *suma, vector<vector<double>> &datos); //Modifica el valor de sum con el coste
+		double costoInicial(vector<vector<double>> &datos);
+		double costoFinal(vector<vector<double>> &datos);
+		void costoMnimo(double *min, int pos, vector<vector<double>> &datos);
 };
 
-Kmeans::Kmeans(int cantClusters): cantClusters(cantClusters)
+Kmeans::Kmeans(int m)
 {
-	huboAsignaciones = true;
-	vecAsig.resize(cantClusters);
+	fi = 0.0;
+	asignaciones.resize(m);
 }
 
 Kmeans::~Kmeans()
 {}
 
-void Kmeans::initCentroides(vector< vector<double> >& vecDatos, double* fi, int* contAsig)
+void Kmeans::llenarCandidatos(vector<vector<double>> &datos, double l)
 {
 	srand(time(NULL));
-	Aleatorizador::inicializar_generador_random();
+	cCandidatos.push_back(datos[rand() % datos.size()]);
+	fi = pow(costoInicial(datos), 0.5);
 
-	int ind = rand() % vecDatos.size();
-	clustersCandidatos.push_back(vecDatos[ind]);
-	clustersCandidatosCopy.push_back(vecDatos[ind]);
+	double min = 0.0, suma = 0.0;
 
-	int iter = 0, pos;
-	double sum = 0.0;
-
-	#pragma omp parallel num_threads( omp_get_num_procs() * 4 ) shared(vecDatos, iter, fi, sum, pos)
+	for (int i = 0; i < 6; i++) //For que se aconseja hacer poco mas de hasta 5 veces
 	{
-		costX(vecDatos, clustersCandidatos, fi);
-		#pragma omp barrier
-
-		#pragma omp single
-		*fi = log(*fi);
-
-		while (iter < (int)(*fi) ) //for que se har� logl veces
+		costoX(&suma, datos);
+		
+		for (int j = 0; j < datos.size(); j++)
 		{
-			costX(vecDatos, clustersCandidatos, &sum);
-			#pragma omp barrier
+			costoMnimo(&min, j, datos);
 
-			#pragma omp for
-			for (int j = 0; j < vecDatos.size(); j++)
+			if ((rand() / (RAND_MAX + 1.0)) < ( l * min / suma))
 			{
-				int tam_clusters;
-				double min = MAXI;
+				cCandidatos.push_back(datos[j]);
+			}
+		}
+	}
+}
 
-				#pragma omp critical
-				tam_clusters = (int)clustersCandidatos.size();
+double Kmeans::distancia(vector<double> &vec1, vector<double> &vec2)
+{
+	double dis = 0.0;
+ 	for (int i = 0; i < vec1.size(); i++)
+		dis += pow(vec1[i] - vec2[i], 2.0);
 
-				for (int k = 0; k < tam_clusters; k++)
+	return dis;
+}
+
+void Kmeans::calcPesos(vector< vector<double> >& cCandidatos, vector < vector<double>> & datos)
+{
+	pesos.resize(cCandidatos.size());
+
+	#pragma omp parallel for num_threads(omp_get_num_procs() * 3) shared(datos)
+	for (int i = 0; i < datos.size(); i++)
+	{
+		int pos = 0;
+		double dis = 0.0, menor = MAXI;
+		
+		for (int j = 1; j < cCandidatos.size(); j++)
+		{
+			if ((dis = distancia(datos[i], cCandidatos[j])) <= menor)
+			{
+				if (dis != double(0))
 				{
-					double dist = distanciaEuclideana(clustersCandidatos[k], vecDatos[j]);
-					if (min > dist)
-						min = dist;
-				}
-
-				#pragma omp critical
-				if (Aleatorizador::random_uniform_real(Aleatorizador::generador) < (0.7 * min) / sum)
-				{
-					clustersCandidatos.push_back(vecDatos[j]);
-					clustersCandidatosCopy.push_back(vecDatos[j]);
+					pos = j;
+					menor = dis;
 				}
 			}
-
-			#pragma omp single
-			iter++;
 		}
-     
-		kmeansPlusplus(&pos, &sum);
-	
-		kmedias(clustersCandidatos, contAsig);
-
-		calcPesos(clustersCandidatos);
-
-		#pragma omp for
-		for (int i = 0; i < cantClusters; i++)
-			clusters[i] = clustersCandidatos[getPesoMayor(i)];
+		pesos[pos]++;
 	}
-
 }
 
-void Kmeans::kmedias(vector< vector<double> >& vecDatos, int* contAsig)
+void Kmeans::costoX(double *suma, vector<vector<double>> &datos)
 {
-    establecerTam(vecDatos);
 
-    while (huboAsignaciones)
-    {
-        calcDistance(vecDatos);
+	double minimo = MAXI, dis=0.0;
+	*suma = 0.0;
 
-        calcAsigment(contAsig);
-
-        if (huboAsignaciones)
-            calcMedia(vecDatos);
-    }
-}
-
-void Kmeans::establecerTam(vector< vector<double> >& vecDatos)
-{
-    #pragma omp single
-    {
-		huboAsignaciones = true; //reseteo del boolean
-        //Definimos los tamanhos de los vectores que posee la clase
-        distancias.resize(vecDatos.size());
-        clusterAsigment.resize(vecDatos.size());
-    }
-
-    #pragma omp for
-    for (int i = 0; i < distancias.size(); i++)
-        distancias[i].resize(cantClusters);
-}
-
-void Kmeans::calcDistance(vector< vector<double> >& vecDatos)
-{
-    #pragma omp for
-    for(int i = 0; i < cantClusters; i++)
-		//#pragma omp for
-        for (int j = 0; j < (int)vecDatos.size(); j++)
-            distancias[j][i] = distanciaEuclideana(clusters[i] /*centroide*/, vecDatos[j]);
-}
-
-void Kmeans::calcAsigment(int* contAsig)
-{	
-    #pragma omp single
-    *contAsig = 0; //Reseteo del contador
-
-    #pragma omp for
-    for(int i = 0; i < distancias.size(); i++)
-    {
-        int ident = 0; //Guardar� el valor del centroide (indice) al que su distancia es la menor
-        double min = distancias[i][0];		
-        for(int j = 1; j < cantClusters; j++)
-            if(min > distancias[i][j])
-            {
-                ident = j;
-                min = distancias[i][j];	
-            }
-
-        if(clusterAsigment[i] == ident)
-        {
-            #pragma omp atomic
-            (*contAsig)++;
-		}
-		else
-			clusterAsigment[i] = ident;
-
-		#pragma omp critical
-		vecAsig[ident].push(i);
-    }
-
-    #pragma omp single
-    if (*contAsig == distancias.size())
-        huboAsignaciones = false;
-}
-
-void Kmeans::calcMedia(vector< vector<double> >& vecDatos)
-{
-    #pragma omp for
-    for(int i = 0; i < cantClusters; i++)
-        for (int j = 0; j < clusters[0].size(); j++)
-            clusters[i][j] = 0;
-
-	#pragma omp for
-	for (int i = 0; i < cantClusters; i++) //i = identificador del cluster
+	#pragma omp parallel for num_threads( omp_get_num_procs() * 3) shared(datos, suma, minimo)
+	for (int i = 0; i < datos.size(); i++)
 	{
-		int cont = vecAsig[i].size();
-		while (!vecAsig[i].empty())
+		double minimo = MAXI;
+		for (int j = 0; j < cCandidatos.size(); j++)
 		{
-			for (int k = 0; k < vecDatos[0].size(); k++)
-				clusters[i][k] += vecDatos[vecAsig[i].front()][k];
-			vecAsig[i].pop();
-		}
-
-		for (int l = 0; l < clusters[0].size(); l++)
-			clusters[i][l] /= (double)cont;
-	}
-}
-
-double Kmeans::distanciaEuclideana(vector<double>& valoresVec1, vector<double>& valoresVec2)
-{
-    double d_e = 0.0; //guardar� la diferencia al cuadrado de las dimensiones del centroide y un vector
-    
-    for (int i = 0; i < valoresVec1.size() /*dimensionClusters*/; i++)
-        d_e += pow(valoresVec1[i] - valoresVec2[i], 2.0);
-
-    return pow(d_e, 0.5);
-}
-
-void Kmeans::costX(vector< vector<double> >& vecDatos, vector< vector<double> >& subVector, double* sum)
-{
-	#pragma omp single
-	*sum = 0.0;
-
-	#pragma omp for
-	for (int i = 0; i < vecDatos.size(); i++)
-	{
-		double min = MAXI;
-		for (int j = 0; j < subVector.size(); j++)
-		{
-			double dist = distanciaEuclideana(subVector[j] /*centroide*/, vecDatos[i]);
-			if (min > dist)
-				min = dist;
-		}
-		#pragma omp atomic
-		*sum += min;
-	}
-}
-
-void Kmeans::kmeansPlusplus(int* pos, double* promedioMaximo)
-{
-    srand(time(NULL));
-	
-	#pragma omp single
-	{
-		*pos = rand() % clustersCandidatos.size();
-		clusters.push_back(clustersCandidatosCopy[*pos]);
-		clustersCandidatosCopy.erase(clustersCandidatosCopy.begin() + *pos);
-	}
-
-	while (clusters.size() < cantClusters)
-	{
-		#pragma omp single
-		*promedioMaximo = 0.0;
-
-		#pragma omp for
-		for (int i = 0; i < clustersCandidatosCopy.size(); i++)
-		{
-			double suma = 0;
-			for (int j = 0; j < clusters.size(); j++)
+			if ((dis = distancia(datos[i], cCandidatos[j])) < minimo)
 			{
-				suma += distanciaEuclideana(clustersCandidatosCopy[i], clusters[j]);
-			}
-
-			#pragma omp critical
-			if (suma > *promedioMaximo)
-			{
-				*promedioMaximo = suma;
-				*pos = i;
+				minimo = dis;
 			}
 		}
+		*suma += minimo;
+	}
 
-		#pragma omp single
-		{
-			clusters.push_back(clustersCandidatosCopy[*pos]);
-			clustersCandidatosCopy.erase(clustersCandidatosCopy.begin() + *pos);
-		}
-    }
 }
 
-void Kmeans::calcPesos(vector< vector<double> >& vecDatos)
+void Kmeans::costoMnimo(double *min, int pos, vector<vector<double>> &datos)
 {
-    #pragma omp single
-    pesos.resize(vecDatos.size());
-
-    #pragma omp for
-    for (int i = 0; i < vecDatos.size(); i++)
-    {
-        int pos = (i + 1) % vecDatos.size();
-        double menor = distanciaEuclideana(vecDatos[i], vecDatos[pos]);
-
-        for (int j = 0; j < vecDatos.size(); j++)
-            if (i != j)
-                if (distanciaEuclideana(vecDatos[i], vecDatos[j]) <= menor)
-                    pos = j;
-        #pragma omp atomic
-        pesos[pos]++;
-    }
-}
-
-int Kmeans::getPesoMayor(int numCluster)
-{
-	int pesoMayor = -5;
-	int pos = 0; //posicion
-
-	for (int i = 0; i < clusterAsigment.size(); i++)
+	*min = MAXI;
+	double minimo = MAXI, dis=0.0;
+	
+	for (int i = 0; i < cCandidatos.size(); i++)
 	{
-		if (clusterAsigment[i] == numCluster && pesos[i] > pesoMayor)
+		if ((minimo = distancia(cCandidatos[i], datos[pos])) < *min)
 		{
-			pesoMayor = pesos[i];
-			pos = i;
+			*min = minimo;
 		}
 	}
-	return pos;
+}
+
+void Kmeans::llenarIniciales(int k, vector<vector<double>> &datos)
+{
+	calcPesos(cCandidatos, datos);
+	cIniciales.resize(k);
+
+	int cantidad = 0, mayor = 0, pos = 0;
+	for (int j = 0; j < k; j++)
+	{
+		cantidad = 0;
+		mayor = 0;
+		pos = 0;
+		
+		for (int i = 0; i< cCandidatos.size() ; i++)
+		{
+			if ((cantidad = pesos[i]) >= mayor)
+			{
+				mayor = cantidad;
+				pos = i;
+			}
+		}
+		cIniciales[j]=cCandidatos[pos];
+		pesos[pos] = -100;
+	}
+}
+
+void Kmeans::recalcIniciales(vector<vector<double>> &datos, int epsilon)
+{
+    bool cambio = true;
+	double costo1 = 0.0, costo2=0.0;
+	
+	do
+	{
+		costo1 = costoFinal(datos);
+		calcMedia(datos);
+		calcAsignaciones(datos, &cambio);
+		costo2 = costoFinal(datos);
+	} while (abs(costo1 - costo2) > epsilon&& cambio);
+	
+}
+
+ void Kmeans::calcMedia(vector<vector<double>> &datos)
+{
+	//Operacion muy barata como para paralelizar
+	 for (int i = 0; i < cIniciales.size(); i++)
+		 for (int j = 0; j < cIniciales[0].size(); j++)
+			 cIniciales[i][j] = 0;
+
+	#pragma omp parallel for num_threads(omp_get_num_procs() * 3) shared(datos)
+	 for (int i = 0; i < cIniciales.size(); i++)
+	 {
+		 int cont = 0;
+		 for (int j = 0; j < datos.size(); j++)
+		 {
+			 if (asignaciones[j] == i)
+			 {
+				 for (int k = 0; k < cIniciales[0].size(); k++)
+				 {
+					 cIniciales[i][k] += datos[j][k];
+					 
+				 }
+				 cont++;
+			 }
+		 }
+
+		 for (int l = 0; l < cIniciales[0].size(); l++)
+			 cIniciales[i][l] /= (double)cont;
+	 }	 
+}
+
+void Kmeans::calcAsignaciones(vector<vector<double>> &datos, bool *cambio)
+{
+	*cambio = false; //Reseteo del booleano
+
+	#pragma omp parallel for num_threads(omp_get_num_procs() * 3) shared (datos, cambio)
+	for (int i = 0; i < datos.size(); i++)
+	{
+		int pos = 0;
+		double menor = MAXI, dis = 0.0;
+		
+		for (int j = 0; j < cIniciales.size(); j++)
+		{
+			if ( (dis = distancia(datos[i], cIniciales[j])) <= menor )
+			{
+				pos = j;
+				menor = dis;
+			}		
+		}
+
+		if( asignaciones[i] != pos )
+		{
+			asignaciones[i] = pos;
+			*cambio = true;
+		}
+	}
+}
+
+double Kmeans::costoInicial(vector<vector<double>> &datos)
+{
+	double suma=0.0;
+	for (int i = 0; i < datos.size(); i++)
+		suma += distancia(cCandidatos[0], datos[i]);
+
+	return suma;
+}
+
+double Kmeans::costoFinal(vector<vector<double>> &datos)
+{
+	double suma = 0.0, dis=0.0;
+
+	#pragma omp parallel for num_threads(omp_get_num_procs() * 3) shared(dis,datos) reduction(+:suma)
+	for (int i = 0; i < datos.size(); i++)
+	{
+		double minimo = MAXI;
+		for (int j = 0; j < cIniciales.size(); j++)
+		{
+			if ( ( dis = distancia(datos[i], cIniciales[j]) ) < minimo)
+				minimo = dis;
+		}
+		suma += minimo;
+	}
+	return suma;
 }
 
 vector<int>& Kmeans::getVecAsignaciones()
 {
-    return clusterAsigment;
+    return asignaciones;
 }
 
 vector< vector<double> >& Kmeans::getVecClusters()
 {
-    return clusters;
+    return cIniciales;
 }

@@ -59,7 +59,7 @@ LectorArchivo::LectorArchivo(ifstream& archivo, vector< vector<double> >& vec)
 
 LectorArchivo::~LectorArchivo(){}
 
-void LectorArchivo::escribirSalida(vector< vector<double> >& vecDatos, vector< vector<double> >& clusters, vector<int>& clusterAsigment, double tiempo, double costo)
+void LectorArchivo::escribirSalida(vector< vector<double> >& datos, vector< vector<double> >& clusters, vector<int>& clusterAsigment, double tiempo, double costo)
 {
     ofstream archivo;
 	int contador;
@@ -87,10 +87,10 @@ void LectorArchivo::escribirSalida(vector< vector<double> >& vecDatos, vector< v
         for(int j = 0; j < clusterAsigment.size(); j++)
             if(clusterAsigment[j] == i)
             {
-                for(int k = 0; k < vecDatos[0].size(); k++)
+                for(int k = 0; k < datos[0].size(); k++)
                 {
-                    archivo << vecDatos[j][k];
-                    if(k != vecDatos[0].size() -1)
+                    archivo << datos[j][k];
+                    if(k != datos[0].size() -1)
                         archivo << ", ";
                     else
                         archivo << "\n";
