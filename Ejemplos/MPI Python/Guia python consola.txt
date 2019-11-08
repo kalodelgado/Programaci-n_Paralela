@@ -1,0 +1,79 @@
+Operaciones fundamentales para trabajar con python desde consola (principalmente para Windows):
+
+1. obteniendo la versión instalada de python (funciona en cualquier SO):
+
+> python --version
+
+NOTA#1: portal oficial de documentación de python: https://docs.python.org/3/
+NOTA#2: ha subsumido la documentación de versiones anteriores de python.
+
+
+2. creación de un ambiente virtual para desarrollo (funciona sólo para Windows):
+
+> python -m venv {nombre del ambiente virtual SIN blancos}
+
+NOTA#1: los ambientes no se pueden copiar!!!!
+NOTA#2: documentación sobre ambientes virtuales de python (Windows, Linux y MacOS): 
+https://packaging.python.org/guides/installing-using-pip-and-virtual-environments/
+
+
+3. para activar/desactivar un ambiente virtual (funciona sólo para Windows):
+
+> .\{nombre del ambiente virtual SIN blancos}\Scripts\activate 	## activa un ambiente
+> .\{nombre del ambiente virtual SIN blancos}\Scripts\deactivate 	## desactiva un ambiente
+
+
+4. para instalar un módulo en un ambiente PREVIAMENTE CREADO Y ACTIVADO:
+
+> pip install {nombre del módulo que se quiere instalar} (funciona en cualquier SO):
+
+NOTA#1: el sitio oficial de módulos para python es: https://pypi.org/
+NOTA#2: a partir de python3 muchos módulos viejos no se pueden instalar en python 3, hay que buscar la versión del módulo para python3
+NOTA#3: en los laboratorios de la ECCI sólo podemos instalar módulos dentro de un ambiente virtual propio. En una estación de trabajo
+		personal también se pueden instalar módulos para el ambiente global, si la cuenta de usuario tiene derechos de administrador.
+
+		
+5. para instalar un módulo en un ambiente global propio del usuario (??) (funciona en cualquier SO):
+
+> pip install --user
+
+NOTA#1: en general NO se recomienda instalar módulos en ambientes globales, se recomienda un ambiente por proyecto con sus propios módulos.
+
+
+6. para obtener información sobre módulos instalados en un ambiente virtual (funciona en cualquier SO):
+
+> pip list --local				## muestra módulos en el ambiente virtual activo
+> pip freeze					## muestra versiones de todos los módulos del ambiente virtual activo
+
+
+7. para ejectuar un programa en python (funciona en cualquier SO):
+
+> python {nombre del programa sin blancos}.py {lista de parámetros de consola si los usa el programa}
+
+
+8. para trabajar con MPI para python (mpi4py) en estación de trabajo individual:
+8.1 instalar mpi4py después de haber creado un ambiente virtual de trabajo:
+
+> pip install mpi4py
+
+NOTA#1: python --version == 3.6.6 funciona bien con mpi4py 2.0.0
+NOTA#2: python --version == 3.7.64 funciona bien con mpi4py 3.0.1
+NOTA#3: Página con documentación sobre mpi4py: https://mpi4py.readthedocs.io/en/stable/intro.html
+
+8.2 ejecución de un programa python con procesos mediante mpi4py:
+
+> mpiexec -n { cantidad de procesos } python -m mpi4py { nombre del script.py SIN blancos} { lista de argumentos del script }
+
+
+9. para entrar a la consola python lo que permite ejecutar directamente instrucciones de python (funciona en cualquier SO):
+
+> python
+>>>
+
+10. para salir de consola de python (funciona en cualquier SO):  ctrl+z
+
+
+11. para usar el depurador pdb de python ver: https://docs.python.org/3/library/pdb.html?highlight=python%20debugger
+
+
+12. para trabajar con mpi4py y python en un cluster ver en el sitio del curso: "mpi4py en un cluster"

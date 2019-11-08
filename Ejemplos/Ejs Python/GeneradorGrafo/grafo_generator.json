@@ -1,0 +1,12 @@
+[
+  '{{repeat(10)}}',
+  {
+    idvrt: '{{index()}}',
+    adys: [
+      '{{repeat(1,9)}}',
+      {
+        ady: '{{integer(0, 9)}}'
+      }
+    ]
+  }
+]
