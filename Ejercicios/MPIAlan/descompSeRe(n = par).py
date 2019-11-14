@@ -79,12 +79,13 @@ def main():
             msj = "P" + str(pid) + "; "+ str(i) + ": "
             factores = descomp_prima(i, l_primos)
 
-            for j in range( len(factores) ):
+            while len(factores) > 0:
                 cfactor = factores.count(factores[j]) #cantidad de elementos iguales a f[j]
                 msj += str(factores[j]) + "(" + str(cfactor) + ")"
-                if j != len(factores) - 1:
-                    msj += " * "
-                j += cfactor
+                for j in range(cantf):
+                    factores.remove(factores[0])
+                if len(factores) > 0:
+		    msj += " * "
             comm.send(msj, dest= pid - P, tag=0)
         comm.send(msj, dest=pid - P, tag=1)
 
