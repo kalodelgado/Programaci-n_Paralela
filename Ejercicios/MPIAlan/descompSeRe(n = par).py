@@ -82,7 +82,7 @@ def main():
             while len(factores) > 0:
                 cfactor = factores.count(factores[0]) #cantidad de elementos iguales a f[j]
                 msj += str(factores[0]) + "(" + str(cfactor) + ")"
-                for j in range(cantf):
+                for j in range(cfactor):
                     factores.remove(factores[0])
                 if len(factores) > 0:
 		    msj += " * "
