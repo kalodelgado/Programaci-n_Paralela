@@ -80,8 +80,8 @@ def main():
             factores = descomp_prima(i, l_primos)
 
             while len(factores) > 0:
-                cfactor = factores.count(factores[j]) #cantidad de elementos iguales a f[j]
-                msj += str(factores[j]) + "(" + str(cfactor) + ")"
+                cfactor = factores.count(factores[0]) #cantidad de elementos iguales a f[j]
+                msj += str(factores[0]) + "(" + str(cfactor) + ")"
                 for j in range(cantf):
                     factores.remove(factores[0])
                 if len(factores) > 0:
