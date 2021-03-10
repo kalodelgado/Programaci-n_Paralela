@@ -1,0 +1,9 @@
+#BlueJ class context
+comment0.target=Especial
+comment1.params=tipoVehiculo\ marca\ modelo\ anno\ vin\ cilindrada\ placa\ precio\ combustible\ transmision\ orugas\ articulado\ propietario
+comment1.target=Especial(java.lang.String,\ java.lang.String,\ java.lang.String,\ int,\ java.lang.String,\ java.lang.String,\ java.lang.String,\ int,\ Combustible,\ Transmision,\ boolean,\ boolean,\ Propietario)
+comment2.params=
+comment2.target=boolean\ getOrugas()
+comment3.params=
+comment3.target=boolean\ getArticulado()
+numComments=4

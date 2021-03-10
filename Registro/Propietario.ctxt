@@ -1,0 +1,9 @@
+#BlueJ class context
+comment0.target=Propietario
+comment1.params=tipo\ cedula
+comment1.target=Propietario(java.lang.String,\ java.lang.String)
+comment2.params=
+comment2.target=java.lang.String\ getTipo()
+comment3.params=
+comment3.target=java.lang.String\ getCedula()
+numComments=4

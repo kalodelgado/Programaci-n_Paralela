@@ -1,0 +1,7 @@
+#BlueJ class context
+comment0.target=Motocicleta
+comment1.params=tipoVehiculo\ marca\ modelo\ anno\ vin\ cilindrada\ placa\ precio\ combustible\ transmision\ numRuedas\ propietario
+comment1.target=Motocicleta(java.lang.String,\ java.lang.String,\ java.lang.String,\ int,\ java.lang.String,\ java.lang.String,\ java.lang.String,\ int,\ Combustible,\ Transmision,\ int,\ Propietario)
+comment2.params=
+comment2.target=int\ getNumeroRuedas()
+numComments=3

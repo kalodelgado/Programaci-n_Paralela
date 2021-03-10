@@ -1,0 +1,11 @@
+#BlueJ class context
+comment0.target=Articulado
+comment1.params=tipoVehiculo\ marca\ modelo\ anno\ vin\ cilindrada\ placa\ precio\ combustible\ transmision\ peso\ ejes\ articulaciones\ propietario
+comment1.target=Articulado(java.lang.String,\ java.lang.String,\ java.lang.String,\ int,\ java.lang.String,\ java.lang.String,\ java.lang.String,\ int,\ Combustible,\ Transmision,\ double,\ int,\ int,\ Propietario)
+comment2.params=
+comment2.target=double\ getPeso()
+comment3.params=
+comment3.target=int\ getEjes()
+comment4.params=
+comment4.target=int\ getArticulaciones()
+numComments=5

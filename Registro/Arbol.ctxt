@@ -1,0 +1,26 @@
+#BlueJ class context
+comment0.target=Arbol
+comment1.params=
+comment1.target=Arbol()
+comment1.text=\r\n\ Constructor\ for\ objects\ of\ class\ Arbol\r\n
+comment10.params=vin
+comment10.target=boolean\ eliminarNodo(java.lang.String)
+comment11.params=aux
+comment11.target=Nodo\ obtenerNodoReemplazo(Nodo)
+comment2.params=
+comment2.target=Nodo\ getRaiz()
+comment3.params=
+comment3.target=boolean\ esVacio()
+comment4.params=
+comment4.target=void\ leerArchivo()
+comment5.params=vehiculo
+comment5.target=void\ agregar(Vehiculo)
+comment6.params=nodo
+comment6.target=void\ agregarNodo(Nodo)
+comment7.params=vin
+comment7.target=Nodo\ buscarPorVin(java.lang.String)
+comment8.params=nodo
+comment8.target=void\ crearListaProfundidad(Nodo)
+comment9.params=placa
+comment9.target=java.lang.String\ busquedaProfundidad(java.lang.String)
+numComments=12

@@ -1,0 +1,9 @@
+#BlueJ class context
+comment0.target=PersonaJuridica
+comment1.params=tipo\ cedula\ nombre\ tipoEmpresa
+comment1.target=PersonaJuridica(java.lang.String,\ java.lang.String,\ java.lang.String,\ Tipo)
+comment2.params=
+comment2.target=java.lang.String\ getNombre()
+comment3.params=
+comment3.target=Tipo\ getTipoJuridico()
+numComments=4
